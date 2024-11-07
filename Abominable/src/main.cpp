@@ -1,24 +1,19 @@
 #include "main.h"
 
-/**
- * A callback function for LLEMU's center button.
- *
- * When this callback is fired, it will toggle line 2 of the LCD text between
- * "I was pressed!" and nothing.
- */
+/////
+// For installation, upgrading, documentations, and tutorials, check out our website!
+// https://ez-robotics.github.io/EZ-Template/
+/////
 
-#define PNUEMATICS_PORT 'A'
-bool toggle = false;
+// Chassis constructor
+ez::Drive chassis(
+    // These are your drive motors, the first motor is used for sensing!
+    {1, 2, 3},     // Left Chassis Ports (negative port will reverse it!)
+    {-4, -5, -6},  // Right Chassis Ports (negative port will reverse it!)
 
-void on_center_button() {
-	static bool pressed = false;
-	pressed = !pressed;
-	if (pressed) {
-		pros::lcd::set_text(2, "I was pressed!");
-	} else {
-		pros::lcd::clear_line(2);
-	}
-}
+    7,      // IMU Port
+    4.125,  // Wheel Diameter (Remember, 4" wheels without screw holes are actually 4.125!)
+    343);   // Wheel RPM
 
 /**
  * Runs initialization code. This occurs as soon as the program is started.
@@ -27,8 +22,39 @@ void on_center_button() {
  * to keep execution time for this mode under a few seconds.
  */
 void initialize() {
-	pros::lcd::initialize();
-	pros::lcd::register_btn1_cb(on_center_button);
+  // Print our branding over your terminal :D
+  ez::ez_template_print();
+
+  pros::delay(500);  // Stop the user from doing anything while legacy ports configure
+
+  // Configure your chassis controls
+  chassis.opcontrol_curve_buttons_toggle(true);  // Enables modifying the controller curve with buttons on the joysticks
+  chassis.opcontrol_drive_activebrake_set(0);    // Sets the active brake kP. We recommend ~2.  0 will disable.
+  chassis.opcontrol_curve_default_set(0, 0);     // Defaults for curve. If using tank, only the first parameter is used. (Comment this line out if you have an SD card!)
+
+  // Set the drive to your own constants from autons.cpp!
+  default_constants();
+
+  // These are already defaulted to these buttons, but you can change the left/right curve buttons here!
+  // chassis.opcontrol_curve_buttons_left_set(pros::E_CONTROLLER_DIGITAL_LEFT, pros::E_CONTROLLER_DIGITAL_RIGHT);  // If using tank, only the left side is used.
+  // chassis.opcontrol_curve_buttons_right_set(pros::E_CONTROLLER_DIGITAL_Y, pros::E_CONTROLLER_DIGITAL_A);
+
+  // Autonomous Selector using LLEMU
+  ez::as::auton_selector.autons_add({
+      Auton("Example Drive\n\nDrive forward and come back.", drive_example),
+      Auton("Example Turn\n\nTurn 3 times.", turn_example),
+      Auton("Drive and Turn\n\nDrive forward, turn, come back. ", drive_and_turn),
+      Auton("Drive and Turn\n\nSlow down during drive.", wait_until_change_speed),
+      Auton("Swing Example\n\nSwing in an 'S' curve", swing_example),
+      Auton("Motion Chaining\n\nDrive forward, turn, and come back, but blend everything together :D", motion_chaining),
+      Auton("Combine all 3 movements", combining_movements),
+      Auton("Interference\n\nAfter driving forward, robot performs differently if interfered or not.", interfered_example),
+  });
+
+  // Initialize chassis and auton selector
+  chassis.initialize();
+  ez::as::initialize();
+  master.rumble(".");
 }
 
 /**
@@ -36,7 +62,9 @@ void initialize() {
  * the VEX Competition Switch, following either autonomous or opcontrol. When
  * the robot is enabled, this task will exit.
  */
-void disabled() {}
+void disabled() {
+  // . . .
+}
 
 /**
  * Runs after initialize(), and before autonomous when connected to the Field
@@ -47,7 +75,9 @@ void disabled() {}
  * This task will exit when the robot is enabled and autonomous or opcontrol
  * starts.
  */
-void competition_initialize() {}
+void competition_initialize() {
+  // . . .
+}
 
 /**
  * Runs the user autonomous code. This function will be started in its own task
@@ -60,7 +90,14 @@ void competition_initialize() {}
  * will be stopped. Re-enabling the robot will restart the task, not re-start it
  * from where it left off.
  */
-void autonomous() {}
+void autonomous() {
+  chassis.pid_targets_reset();                // Resets PID targets to 0
+  chassis.drive_imu_reset();                  // Reset gyro position to 0
+  chassis.drive_sensor_reset();               // Reset drive sensors to 0
+  chassis.drive_brake_set(MOTOR_BRAKE_HOLD);  // Set motors to hold.  This helps autonomous consistency
+
+  ez::as::auton_selector.selected_auton_call();  // Calls selected auton from autonomous selector
+}
 
 /**
  * Runs the operator control code. This function will be started in its own task
@@ -76,34 +113,48 @@ void autonomous() {}
  * task, not resume it from where it left off.
  */
 void opcontrol() {
-	pros::Controller master(pros::E_CONTROLLER_MASTER);
-	pros::MotorGroup left_mg({1, -2, 3});    // Creates a motor group with forwards ports 1 & 3 and reversed port 2
-	pros::MotorGroup right_mg({-4, 5, -6});  // Creates a motor group with forwards port 5 and reversed ports 4 & 6
-	pros::adi::DigitalOut piston (1, LOW);
+  // This is preference to what you like to drive on
+  pros::motor_brake_mode_e_t driver_preference_brake = MOTOR_BRAKE_COAST;
 
-	while (true) {
-		pros::lcd::print(0, "%d %d %d", (pros::lcd::read_buttons() & LCD_BTN_LEFT) >> 2,
-		                 (pros::lcd::read_buttons() & LCD_BTN_CENTER) >> 1,
-		                 (pros::lcd::read_buttons() & LCD_BTN_RIGHT) >> 0);  // Prints status of the emulated screen LCDs
+  chassis.drive_brake_set(driver_preference_brake);
 
-		// Arcade control scheme
-		int dir = master.get_analog(ANALOG_LEFT_Y);    // Gets amount forward/backward from left joystick
-		int turn = master.get_analog(ANALOG_RIGHT_X);  // Gets the turn left/right from right joystick
-		left_mg.move(dir - turn);                      // Sets left motor voltage
-		right_mg.move(dir + turn);                     // Sets right motor voltage
+  pros::ADIDigitalOut piston (1);
 
-		if (master.get_digital(DIGITAL_RIGHT)) {
-			if (toggle == false) {
-				piston.set_value(HIGH);
-				toggle = true;
-			} else if (toggle == true) {
-			
-				piston.set_value(LOW);
-                toggle = false;
-			}
-			
-		}
+  while (true) {
+    // PID Tuner
+    // After you find values that you're happy with, you'll have to set them in auton.cpp
+    if (!pros::competition::is_connected()) {
+      // Enable / Disable PID Tuner
+      //  When enabled:
+      //  * use A and Y to increment / decrement the constants
+      //  * use the arrow keys to navigate the constants
+      if (master.get_digital_new_press(DIGITAL_X))
+        chassis.pid_tuner_toggle();
 
-		pros::delay(20);                               // Run for 20 ms then update
-	}
+      // Trigger the selected autonomous routine
+      if (master.get_digital(DIGITAL_B) && master.get_digital(DIGITAL_DOWN)) {
+        autonomous();
+        chassis.drive_brake_set(driver_preference_brake);
+      }
+
+
+      if (pros::E_CONTROLLER_DIGITAL_A) {
+        piston.set_value(HIGH);
+      }
+
+      chassis.pid_tuner_iterate();  // Allow PID Tuner to iterate
+    }
+
+    // chassis.opcontrol_tank();  // Tank control
+    chassis.opcontrol_arcade_standard(ez::SPLIT);   // Standard split arcade
+    // chassis.opcontrol_arcade_standard(ez::SINGLE);  // Standard single arcade
+    // chassis.opcontrol_arcade_flipped(ez::SPLIT);    // Flipped split arcade
+    // chassis.opcontrol_arcade_flipped(ez::SINGLE);   // Flipped single arcade
+
+    // . . .
+    // Put more user control code here!
+    // . . .
+
+    pros::delay(ez::util::DELAY_TIME);  // This is used for timer calculations!  Keep this ez::util::DELAY_TIME
+  }
 }
