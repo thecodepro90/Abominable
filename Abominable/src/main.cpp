@@ -8,12 +8,12 @@
 // Chassis constructor
 ez::Drive chassis(
     // These are your drive motors, the first motor is used for sensing!
-    {1, 2, 3},     // Left Chassis Ports (negative port will reverse it!)
-    {-4, -5, -6},  // Right Chassis Ports (negative port will reverse it!)
+    {10, 19},     // Left Chassis Ports (negative port will reverse it!)
+    {9, 20},  // Right Chassis Ports (negative port will reverse it!)
 
     7,      // IMU Port
-    4.125,  // Wheel Diameter (Remember, 4" wheels without screw holes are actually 4.125!)
-    343);   // Wheel RPM
+    4,  // Wheel Diameter (Remember, 4" wheels without screw holes are actually 4.125!)
+    260);   // Wheel RPM
 
 /**
  * Runs initialization code. This occurs as soon as the program is started.
@@ -99,6 +99,20 @@ void autonomous() {
   ez::as::auton_selector.selected_auton_call();  // Calls selected auton from autonomous selector
 }
 
+
+bool toggle = false;
+
+void toggle_piston() {
+  pros::ADIDigitalOut piston (1);
+  if (toggle) {
+    piston.set_value(HIGH);
+    toggle = true;
+  } else if (!toggle) {
+    piston.set_value(LOW);
+    toggle = false;
+  }
+}
+
 /**
  * Runs the operator control code. This function will be started in its own task
  * with the default priority and stack size whenever the robot is enabled via
@@ -118,7 +132,7 @@ void opcontrol() {
 
   chassis.drive_brake_set(driver_preference_brake);
 
-  pros::ADIDigitalOut piston (1);
+  
 
   while (true) {
     // PID Tuner
@@ -139,7 +153,7 @@ void opcontrol() {
 
 
       if (pros::E_CONTROLLER_DIGITAL_A) {
-        piston.set_value(HIGH);
+        pros::Task piston_task(toggle_piston);
       }
 
       chassis.pid_tuner_iterate();  // Allow PID Tuner to iterate
