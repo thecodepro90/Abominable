@@ -1,10 +1,10 @@
 #include "main.h"
 
 pros::Controller master(pros::E_CONTROLLER_MASTER);
-pros::MotorGroup left_mg({10,19}); 
-pros::MotorGroup right_mg({9, 20});
+pros::MotorGroup left_mg({9, 20, 5}, pros::v5::MotorGears::blue); 
+pros::MotorGroup right_mg({-10, -19, -2}, pros::v5::MotorGears::blue);
 pros::ADIDigitalOut piston(1);
-pros::Motor intake(16, pros::v5::MotorGears::blue);
+pros::Motor intake(-12, pros::v5::MotorGears::blue);
 pros::Motor hook(6, pros::v5::MotorGears::green);
 
 
@@ -48,7 +48,31 @@ void competition_initialize() {}
  * will be stopped. Re-enabling the robot will restart the task, not re-start it
  * from where it left off.
  */
-void autonomous() {}
+void autonomous() {
+	piston.set_value(false);
+	left_mg.move(-127);
+	right_mg.move(-127);
+	pros::delay(550);
+	left_mg.move(0);
+	right_mg.move(0);
+	piston.set_value(true);
+	pros::delay(250);
+	hook.move(-127);
+	pros::delay(3000);
+	hook.move(0);
+	// right_mg.move(-127);
+	// left_mg.move(127);
+	// pros::delay(100);
+	// intake.move(-127);
+	// right_mg.move(127);
+	// left_mg.move(127);
+	// pros::delay(1000);
+
+
+	
+	
+	
+}
 
 /**
  * Runs the operator control code. This function will be started in its own task
@@ -81,13 +105,13 @@ void toggle_intake_fn() {
 	while (true) {
 		if (master.get_digital(DIGITAL_L2)) 
 		{
-			intake.move_velocity(pros::E_MOTOR_GEAR_BLUE);
-			hook.move_velocity(pros::E_MOTOR_GEAR_BLUE);
+			intake.move(127);
+			hook.move(127);
 		}
 		else if (master.get_digital(DIGITAL_L1)) 
 		{
-			intake.move_velocity(-pros::E_MOTOR_GEAR_BLUE);
-			hook.move_velocity(-pros::E_MOTOR_GEAR_BLUE);
+			intake.move(-127);
+			hook.move(-127);
 		}
 		else
 		{
