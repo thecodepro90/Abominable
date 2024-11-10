@@ -91,9 +91,15 @@ void toggle_piston_fn() {
 	bool toggle = true;
 	piston.set_value(toggle);
 	while (true) {
+		// if (master.get_digital(DIGITAL_A)) {
+		// 	toggle = !toggle;
+		// 	piston.set_value(toggle);
+		// }
+
 		if (master.get_digital(DIGITAL_A)) {
-			toggle = !toggle;
-			piston.set_value(toggle);
+			piston.set_value(false);
+		} else if (master.get_digital(DIGITAL_B)) {
+			piston.set_value(true);
 		}
 		
 		pros::delay(115);   
