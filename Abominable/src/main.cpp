@@ -9,12 +9,6 @@ pros::Motor hook(6, pros::v5::MotorGears::green);
 
 
 
-/**
- * Runs initialization code. This occurs as soon as the program is started.
- *
- * All other competition modes are blocked by initialize; it is recommended
- * to keep execution time for this mode under a few seconds.
- */
 void initialize() {
 	pros::lcd::initialize();
 }
@@ -37,56 +31,49 @@ void disabled() {}
  */
 void competition_initialize() {}
 
-/**
- * Runs the user autonomous code. This function will be started in its own task
- * with the default priority and stack size whenever the robot is enabled via
- * the Field Management System or the VEX Competition Switch in the autonomous
- * mode. Alternatively, this function may be called in initialize or opcontrol
- * for non-competition testing purposes.
- *
- * If the robot is disabled or communications is lost, the autonomous task
- * will be stopped. Re-enabling the robot will restart the task, not re-start it
- * from where it left off.
- */
-void autonomous() {
-	piston.set_value(false);
-	left_mg.move(-127);
-	right_mg.move(-127);
-	pros::delay(550);
+/* 
+* Runs the drivetrain for int milliseconds and at the speed of int velocity then stops
+* Make int velocity negative to go backwards
+*/
+void driveFor(int milliseconds, int velocity) {
+	left_mg.move(velocity);
+	right_mg.move(velocity);
+	pros::delay(milliseconds);
 	left_mg.move(0);
 	right_mg.move(0);
-	piston.set_value(true);
-	pros::delay(250);
-	hook.move(-127);
-	pros::delay(3000);
-	hook.move(0);
-	// right_mg.move(-127);
-	// left_mg.move(127);
-	// pros::delay(100);
-	// intake.move(-127);
-	// right_mg.move(127);
-	// left_mg.move(127);
-	// pros::delay(1000);
-
-
-	
-	
-	
 }
 
-/**
- * Runs the operator control code. This function will be started in its own task
- * with the default priority and stack size whenever the robot is enabled via
- * the Field Management System or the VEX Competition Switch in the operator
- * control mode.
- *
- * If no competition control is connected, this function will run immediately
- * following initialize().
- *
- * If the robot is disabled or communications is lost, the
- * operator control task will be stopped. Re-enabling the robot will restart the
- * task, not resume it from where it left off.
- */
+void turnRightFor(int milliseconds) {
+	left_mg.move(127);
+    right_mg.move(-127);
+    pros::delay(milliseconds);
+    left_mg.move(0);
+    right_mg.move(0);
+}
+
+void turnLeftFor(int milliseconds) {
+	left_mg.move(-127);
+    right_mg.move(127);
+    pros::delay(milliseconds);
+    left_mg.move(0);
+    right_mg.move(0);
+}
+
+void runIntake(int milliseconds) {
+	intake.move(-127);
+	hook.move(-127);
+    pros::delay(milliseconds);
+    intake.move(0);
+	hook.move(0);
+}
+
+void autonomous() {
+	piston.set_value(false);
+	driveFor(550, -127);
+	piston.set_value(true);
+	runIntake(3000);
+}
+
 void toggle_piston_fn() {
 	bool toggle = true;
 	piston.set_value(toggle);
@@ -102,7 +89,7 @@ void toggle_piston_fn() {
 			piston.set_value(true);
 		}
 		
-		pros::delay(115);   
+		// pros::delay(115);   
 	}
 		
 }
@@ -121,8 +108,8 @@ void toggle_intake_fn() {
 		}
 		else
 		{
-			intake.brake();
-			hook.brake();
+			intake.move(0);
+			hook.move(0);
 		}
 		
 	}
@@ -137,13 +124,14 @@ void opcontrol() {
 
 	while (true) {
 		// Arcade control scheme
-		int dir = master.get_analog(ANALOG_LEFT_Y);    // Gets amount forward/backward from left joystick
-		int turn = master.get_analog(ANALOG_RIGHT_X);  // Gets the turn left/right from right joystick
-		left_mg.move(dir - turn);                      // Sets left motor voltage
-		right_mg.move(dir + turn);                     // Sets right motor voltage
+		int dir = master.get_analog(ANALOG_LEFT_Y);
+		int turn = master.get_analog(ANALOG_RIGHT_X); 
+		left_mg.move(dir - turn);                      
+		right_mg.move(dir + turn);                     
 
 		
+		
 
-		pros::delay(20);                               // Run for 20 ms then update
+		pros::delay(20);                              
 	}
 }
