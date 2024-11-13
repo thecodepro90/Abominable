@@ -1,12 +1,56 @@
 #include "main.h"
 
 pros::Controller master(pros::E_CONTROLLER_MASTER);
-pros::MotorGroup left_mg({9, 20, 5}, pros::v5::MotorGears::blue); 
-pros::MotorGroup right_mg({-10, -19, -2}, pros::v5::MotorGears::blue);
+// pros::MotorGroup left_mg({9, 20, 5}, pros::v5::MotorGears::blue); 
+// pros::MotorGroup right_mg({-10, -19, -2}, pros::v5::MotorGears::blue);
 pros::ADIDigitalOut piston(1);
 pros::Motor intake(-12, pros::v5::MotorGears::blue);
 pros::Motor hook(6, pros::v5::MotorGears::green);
 
+
+class DriveTrain {
+private:
+    std::vector<std::int8_t> left_ports;
+    std::vector<std::int8_t> right_ports;
+	pros::v5::MotorGear gear_ratio;
+	
+	pros::MotorGroup left_mg;
+	pros::MotorGroup right_mg;
+
+public:
+
+    DriveTrain(const std::vector<std::int8_t>& x, const std::vector<std::int8_t>& y, pros::v5::MotorGear z) 
+	: left_ports(x), right_ports(y), gear_ratio(z) ,
+	  left_mg(left_ports, gear_ratio), right_mg(right_ports, gear_ratio) {}
+
+
+	void drive(int left_speed, int right_speed) {
+        left_mg.move(left_speed);
+        right_mg.move(right_speed);
+    }
+
+	void driveFor(int milliseconds, int velocity) {
+		drive(velocity, velocity);
+		pros::delay(milliseconds);
+		drive(0, 0);
+	}
+
+	void turnRightFor(int milliseconds) {
+		drive(127, -127);
+		pros::delay(milliseconds);
+		drive(0, 0);
+	}
+
+	void turnLeftFor(int milliseconds) {
+		drive(-127, 127);
+		pros::delay(milliseconds);
+		drive(0, 0);
+	}
+
+
+};
+
+DriveTrain drivetrain({9, 20, 5}, {-10, -19, -2}, pros::v5::MotorGear::blue);
 
 
 void initialize() {
@@ -34,33 +78,7 @@ void disabled() {
  */
 void competition_initialize() {}
 
-/* 
-* Runs the drivetrain for int milliseconds and at the speed of int velocity then stops
-* Make int velocity negative to go backwards
-*/
-void driveFor(int milliseconds, int velocity) {
-	left_mg.move(velocity);
-	right_mg.move(velocity);
-	pros::delay(milliseconds);
-	left_mg.move(0);
-	right_mg.move(0);
-}
 
-void turnRightFor(int milliseconds) {
-	left_mg.move(127);
-    right_mg.move(-127);
-    pros::delay(milliseconds);
-    left_mg.move(0);
-    right_mg.move(0);
-}
-
-void turnLeftFor(int milliseconds) {
-	left_mg.move(-127);
-    right_mg.move(127);
-    pros::delay(milliseconds);
-    left_mg.move(0);
-    right_mg.move(0);
-}
 
 void runIntake(int milliseconds) {
 	intake.move(-127);
@@ -72,7 +90,7 @@ void runIntake(int milliseconds) {
 
 void autonomous() {
 	piston.set_value(false);
-	driveFor(550, -127);
+	drivetrain.driveFor(550, -127);
 	piston.set_value(true);
 	runIntake(3000);
 }
@@ -129,8 +147,11 @@ void opcontrol() {
 		// Arcade control scheme
 		int dir = master.get_analog(ANALOG_LEFT_Y);
 		int turn = master.get_analog(ANALOG_RIGHT_X); 
-		left_mg.move(dir - turn);                      
-		right_mg.move(dir + turn);                     
+
+		drivetrain.drive(dir - turn, dir + turn);
+
+		// left_mg.move(dir - turn);                      
+		// right_mg.move(dir + turn);                     
 
 		
 		
