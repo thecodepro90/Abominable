@@ -25,20 +25,24 @@ public:
 	void driveFor(int milliseconds, int velocity) {
 		drive(velocity, velocity);
 		pros::delay(milliseconds);
-		drive(0, 0);
+		stop();
 	}
 
 	void turnRightFor(int milliseconds) {
 		drive(127, -127);
 		pros::delay(milliseconds);
-		drive(0, 0);
+		stop();
 	}
 
 	void turnLeftFor(int milliseconds) {
 		drive(-127, 127);
 		pros::delay(milliseconds);
-		drive(0, 0);
+		stop();
 	}
+
+	void stop() {
+        drive(0, 0);
+    }
 
 
 };
