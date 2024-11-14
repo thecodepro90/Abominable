@@ -148,7 +148,10 @@ void opcontrol() {
 		int dir = master.get_analog(ANALOG_LEFT_Y);
 		int turn = master.get_analog(ANALOG_RIGHT_X); 
 
-		drivetrain.drive(dir - turn, dir + turn);
+		int left = dir - turn;
+		int right = dir + turn;
+
+		drivetrain.drive((left*left*left)*0.0001, (right*right*right)*0.0001);
 
 		// left_mg.move(dir - turn);                      
 		// right_mg.move(dir + turn);                     

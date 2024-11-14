@@ -30,6 +30,7 @@
 #include <iostream>
 #include <vector>
 #include <array>
+#include <cmath>
 #else /* (not) __cplusplus */
 #include <errno.h>
 #include <math.h>
