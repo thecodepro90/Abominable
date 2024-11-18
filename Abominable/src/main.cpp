@@ -52,6 +52,10 @@ void autonomous() {
 	drivetrain.driveFor(550, -127);
 	piston.set_value(true);
 	runIntake(3000);
+	// piston.set_value(true);
+	// runIntake(3000);
+	// drivetrain.turnRightFor(300);
+	// drivetrain.driveFor(1200, -127);
 }
 
 void toggle_piston_fn() {
