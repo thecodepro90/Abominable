@@ -8,8 +8,8 @@
 // Chassis constructor
 ez::Drive chassis(
     // These are your drive motors, the first motor is used for sensing!
-    {10, 19},     // Left Chassis Ports (negative port will reverse it!)
-    {9, 20},  // Right Chassis Ports (negative port will reverse it!)
+    {10, 19,2},     // Left Chassis Ports (negative port will reverse it!)
+    {9, 20,5},  // Right Chassis Ports (negative port will reverse it!)
 
     7,      // IMU Port
     4,  // Wheel Diameter (Remember, 4" wheels without screw holes are actually 4.125!)
@@ -100,41 +100,44 @@ void autonomous() {
 }
 
 
-bool toggle = false;
 
-void toggle_piston() {
-  pros::ADIDigitalOut piston (1);
-  if (toggle) {
-    piston.set_value(HIGH);
-    toggle = true;
-  } else if (!toggle) {
-    piston.set_value(LOW);
-    toggle = false;
+void toggle_intake() {
+  while (true) {
+    if (master.get_digital(DIGITAL_L2)) {
+      intake.move(-127);
+      hook.move(-127);
+    } else if (master.get_digital(DIGITAL_L1)) {
+      intake.move(127);
+      hook.move(127);
+    }
   }
 }
 
-/**
- * Runs the operator control code. This function will be started in its own task
- * with the default priority and stack size whenever the robot is enabled via
- * the Field Management System or the VEX Competition Switch in the operator
- * control mode.
- *
- * If no competition control is connected, this function will run immediately
- * following initialize().
- *
- * If the robot is disabled or communications is lost, the
- * operator control task will be stopped. Re-enabling the robot will restart the
- * task, not resume it from where it left off.
- */
+void toggle_piston() {
+  bool toggle = false;
+
+  while (true) {
+    if (master.get_digital(DIGITAL_A)) {
+      toggle = true;
+      piston.set_value(toggle);
+    } else if (master.get_digital(DIGITAL_B)) {
+      toggle = false;
+      piston.set_value(toggle);
+    }
+  }
+}
+
 void opcontrol() {
   // This is preference to what you like to drive on
   pros::motor_brake_mode_e_t driver_preference_brake = MOTOR_BRAKE_COAST;
 
   chassis.drive_brake_set(driver_preference_brake);
 
-  
+  pros::Task piston_task(toggle_piston);
+  pros::Task intake_task(toggle_intake);
 
   while (true) {
+
     // PID Tuner
     // After you find values that you're happy with, you'll have to set them in auton.cpp
     if (!pros::competition::is_connected()) {
@@ -149,11 +152,6 @@ void opcontrol() {
       if (master.get_digital(DIGITAL_B) && master.get_digital(DIGITAL_DOWN)) {
         autonomous();
         chassis.drive_brake_set(driver_preference_brake);
-      }
-
-
-      if (pros::E_CONTROLLER_DIGITAL_A) {
-        pros::Task piston_task(toggle_piston);
       }
 
       chassis.pid_tuner_iterate();  // Allow PID Tuner to iterate
